@@ -17,12 +17,6 @@ app.use(session({
     resave: false,
     saveUninitialized: true
 }));
-app.use(express.static(path.join(__dirname, "public")));
-
-// Ruta principal
-app.get("/", (req, res) => {
-    res.sendFile(path.join(__dirname, "public", "index.html"));
-});
 
 // Conexión MySQL
 const connection = mysql.createConnection({
