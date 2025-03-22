@@ -20,10 +20,10 @@ app.use(session({
 
 // Conexión MySQL
 const connection = mysql.createConnection({
-    host: "localhost",
-    user: "root",
-    password: "SkillFinder3152025",
-    database: "skillfinder"
+    host: "sql5.freesqldatabase.com",
+    user: "	sql5769027",
+    password: "7zWTErI4u7",
+    database: "sql5769027"
 });
 
 connection.connect(err => {
