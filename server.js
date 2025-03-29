@@ -376,47 +376,69 @@ app.get("/api/recomendaciones", async (req, res) => {
       9: "Programación", 10: "Idiomas", 11: "Emprendimiento", 12: "Marketing"
     };
 
-    if (!mapa[intereses.interest1] || !mapa[intereses.interest2] || !mapa[intereses.interest3]) {
+    const tema1 = mapa[intereses.interest1];
+    const tema2 = mapa[intereses.interest2];
+    const tema3 = mapa[intereses.interest3];
+
+    if (!tema1 || !tema2 || !tema3) {
+      console.error("❌ Intereses inválidos:", intereses);
       return res.status(400).json({ success: false, message: "Intereses inválidos" });
     }
 
-    const temas = [mapa[intereses.interest1], mapa[intereses.interest2], mapa[intereses.interest3]].join(", ");
+    const temas = `${tema1}, ${tema2}, ${tema3}`;
     const serpUrl = `https://serpapi.com/search.json?q=${encodeURIComponent("curso online sobre " + temas)}&engine=google&api_key=9624900be173d3dee2abd9eced069cce858eb6bc0733af0d73619fe7767c7399`;
 
-    console.log("🌐 Consulta a SerpAPI:", serpUrl);
+    console.log("🔎 SerpAPI URL:", serpUrl);
 
     const serpRes = await axios.get(serpUrl);
     const resultados = serpRes.data.organic_results?.slice(0, 8) || [];
 
     if (resultados.length === 0) {
-      console.error("❌ SerpAPI no devolvió resultados.");
-      return res.status(500).json({ success: false, message: "No se encontraron cursos" });
+      console.warn("⚠️ SerpAPI devolvió resultados vacíos.");
+      return res.status(500).json({ success: false, message: "No se encontraron cursos relevantes" });
     }
 
-    const userPrompt = JSON.stringify(resultados.map(curso => ({
+    const cursosEntrada = resultados.map(curso => ({
       titulo: curso.title,
       descripcion: curso.snippet || "",
       url: curso.link,
       imagen: curso.pagemap?.cse_thumbnail?.[0]?.src || "https://via.placeholder.com/150"
-    })));
+    }));
+
+    const userPrompt = JSON.stringify(cursosEntrada, null, 2);
+    const systemPrompt = `Eres un asistente que analiza cursos educativos encontrados en internet. Tu tarea es: 
+1. Organizar los cursos por relevancia.
+2. Reescribir las descripciones de forma atractiva.
+3. Asignar una calificación del 1 al 5 según popularidad.
+4. Si es necesaria en el mercado laboral, añade esto a la descripción: "DEMANDA EN LA ACTUALIDAD".
+Devuelve un JSON con este formato:
+[
+  {
+    "titulo": "...",
+    "descripcion": "...",
+    "url": "...",
+    "imagen": "...",
+    "calificacion": 4
+  }
+]`;
 
     const gptResponse = await openai.chat.completions.create({
       model: "gpt-3.5-turbo",
       messages: [
-        { role: "system", content: `Eres un asistente... (todo el prompt)` },
+        { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt }
       ],
       temperature: 0.7
     });
 
     const texto = gptResponse.choices[0].message.content;
-    console.log("📦 GPT output crudo:", texto);
+    console.log("🧠 Respuesta de GPT:\n", texto);
 
     let cursosGPT;
     try {
       cursosGPT = JSON.parse(texto);
     } catch (error) {
-      console.error("❌ Error al parsear JSON de GPT:", error.message);
+      console.error("❌ Error al parsear respuesta GPT:", error.message);
       return res.status(500).json({ success: false, message: "Respuesta de GPT inválida" });
     }
 
