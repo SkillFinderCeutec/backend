@@ -228,7 +228,7 @@ app.post("/api/logout", (req, res) => {
 
 app.post("/filtrar-cursos", async (req, res) => {
     const { precio, idioma, q } = req.body;
-    const apiKey = "c07d09b526dc02fe814b600d8740ba845dd7834ae6dd99e51ffbad05704fbc5d";
+    const apiKey = "9624900be173d3dee2abd9eced069cce858eb6bc0733af0d73619fe7767c7399";
   
     // Traducciones por idioma
     const traducciones = {
@@ -281,7 +281,7 @@ app.post("/filtrar-cursos", async (req, res) => {
 // Búsqueda sin filtros pero enfocada a cursos
 app.get("/buscar-cursos", async (req, res) => {
     const query = req.query.q;
-    const apiKey = "c07d09b526dc02fe814b600d8740ba845dd7834ae6dd99e51ffbad05704fbc5d";
+    const apiKey = "9624900be173d3dee2abd9eced069cce858eb6bc0733af0d73619fe7767c7399";
 
     if (!query) {
         return res.status(400).json({ error: "Falta parámetro de búsqueda" });
