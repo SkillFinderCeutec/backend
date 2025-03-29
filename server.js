@@ -11,7 +11,7 @@ const PORT = process.env.PORT || 3000;
 
 // Middleware
 app.use(cors({
-  origin: "https://skillfinderceutec.github.io", // ← tu frontend
+  origin: "https://doctria.github.io", // ← tu frontend
   credentials: true
 }));
 
