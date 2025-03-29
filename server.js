@@ -28,8 +28,7 @@ app.get("/", (req, res) => {
 const { createClient } = require("@libsql/client");
 
 const client = createClient({
-  url: "file:local.db",
-  syncUrl: "https://doctria-skillfinderceutec.aws-us-west-2.turso.io",
+  url: "libsql://doctria-skillfinderceutec.turso.io",
   authToken: "eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJhIjoicnciLCJpYXQiOjE3NDMyNTIwNDUsImlkIjoiOTIyZjk4MjgtOTY4Yi00NzAyLTgxNzMtNWUxY2JhNzk0OGY3IiwicmlkIjoiYzJjMDA0MzItMDU1Ni00YTRhLTk4ZjItZTIyMzk0NTQyMjFlIn0.WNrZlTQ8J0D11U6DEhIU3C2QAOtV51DG8PAu_eWNlNmeeGHULdz8nF5InaAeEDOefYsFF7pU4YVHDmb5_Qz-Aw",
 });
 
