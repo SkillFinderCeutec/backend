@@ -355,77 +355,78 @@ const openai = new OpenAI({
 });
 
 app.get("/api/recomendaciones", async (req, res) => {
-    if (!req.session.userId) {
-      return res.status(401).json({ success: false, message: "No autenticado" });
+  if (!req.session.userId) {
+    return res.status(401).json({ success: false, message: "No autenticado" });
+  }
+
+  try {
+    const result = await client.execute({
+      sql: "SELECT interest1, interest2, interest3 FROM Users WHERE id = ?",
+      args: [req.session.userId]
+    });
+
+    if (result.rows.length === 0) {
+      return res.status(500).json({ success: false, message: "Intereses no encontrados" });
     }
-  
+
+    const intereses = result.rows[0];
+    const mapa = {
+      1: "Administración", 2: "Economía", 3: "Tecnología", 4: "Fotografía",
+      5: "Cocina", 6: "Jardinería", 7: "Publicidad", 8: "Diseño Gráfico",
+      9: "Programación", 10: "Idiomas", 11: "Emprendimiento", 12: "Marketing"
+    };
+
+    if (!mapa[intereses.interest1] || !mapa[intereses.interest2] || !mapa[intereses.interest3]) {
+      return res.status(400).json({ success: false, message: "Intereses inválidos" });
+    }
+
+    const temas = [mapa[intereses.interest1], mapa[intereses.interest2], mapa[intereses.interest3]].join(", ");
+    const serpUrl = `https://serpapi.com/search.json?q=${encodeURIComponent("curso online sobre " + temas)}&engine=google&api_key=9624900be173d3dee2abd9eced069cce858eb6bc0733af0d73619fe7767c7399`;
+
+    console.log("🌐 Consulta a SerpAPI:", serpUrl);
+
+    const serpRes = await axios.get(serpUrl);
+    const resultados = serpRes.data.organic_results?.slice(0, 8) || [];
+
+    if (resultados.length === 0) {
+      console.error("❌ SerpAPI no devolvió resultados.");
+      return res.status(500).json({ success: false, message: "No se encontraron cursos" });
+    }
+
+    const userPrompt = JSON.stringify(resultados.map(curso => ({
+      titulo: curso.title,
+      descripcion: curso.snippet || "",
+      url: curso.link,
+      imagen: curso.pagemap?.cse_thumbnail?.[0]?.src || "https://via.placeholder.com/150"
+    })));
+
+    const gptResponse = await openai.chat.completions.create({
+      model: "gpt-3.5-turbo",
+      messages: [
+        { role: "system", content: `Eres un asistente... (todo el prompt)` },
+        { role: "user", content: userPrompt }
+      ],
+      temperature: 0.7
+    });
+
+    const texto = gptResponse.choices[0].message.content;
+    console.log("📦 GPT output crudo:", texto);
+
+    let cursosGPT;
     try {
-      const result = await client.execute({
-        sql: "SELECT interest1, interest2, interest3 FROM Users WHERE id = ?",
-        args: [req.session.userId]
-      });
-  
-      if (result.rows.length === 0) {
-        return res.status(500).json({ success: false, message: "Error al obtener intereses" });
-      }
-  
-      const intereses = result.rows[0];
-      const mapa = {
-        1: "Administración", 2: "Economía", 3: "Tecnología", 4: "Fotografía",
-        5: "Cocina", 6: "Jardinería", 7: "Publicidad", 8: "Diseño Gráfico",
-        9: "Programación", 10: "Idiomas", 11: "Emprendimiento", 12: "Marketing"
-      };
-  
-      const temas = [mapa[intereses.interest1], mapa[intereses.interest2], mapa[intereses.interest3]].join(", ");
-      const serpApiKey = "9624900be173d3dee2abd9eced069cce858eb6bc0733af0d73619fe7767c7399";
-      const serpUrl = `https://serpapi.com/search.json?q=${encodeURIComponent("curso online sobre " + temas)}&engine=google&api_key=${serpApiKey}`;
-  
-      const serpRes = await axios.get(serpUrl);
-      const resultados = serpRes.data.organic_results?.slice(0, 8) || [];
-  
-      const systemPrompt = `Eres un asistente que analiza cursos educativos encontrados en internet. Tu tarea es: 
-  1. Organizar los cursos por relevancia.
-  2. Reescribir las descripciones de forma atractiva.
-  3. Asignar una calificación del 1 al 5 según popularidad.
-  4. Si es necesaria en el mercado laboral, añade esto a la descripción: "DEMANDA EN LA ACTUALIDAD".
-  Devuelve un JSON con este formato:
-  [
-    {
-      "titulo": "...",
-      "descripcion": "...",
-      "url": "...",
-      "imagen": "...",
-      "calificacion": 4
-    }
-  ]`;
-  
-      const userPrompt = JSON.stringify(resultados.map(curso => ({
-        titulo: curso.title,
-        descripcion: curso.snippet || "",
-        url: curso.link,
-        imagen: curso.pagemap?.cse_thumbnail?.[0]?.src || "https://via.placeholder.com/150"
-      })));
-  
-      const gptResponse = await openai.chat.completions.create({
-        model: "gpt-3.5-turbo",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt }
-        ],
-        temperature: 0.7
-      });
-  
-      const texto = gptResponse.choices[0].message.content;
-      console.log("🔍 Respuesta cruda de ChatGPT:", texto);
-  
-      const cursosGPT = JSON.parse(texto);
-      res.json({ success: true, cursos: cursosGPT });
-  
+      cursosGPT = JSON.parse(texto);
     } catch (error) {
-      console.error("❌ Error en recomendación:", error.message);
-      res.status(500).json({ success: false, message: "Error al obtener recomendaciones" });
+      console.error("❌ Error al parsear JSON de GPT:", error.message);
+      return res.status(500).json({ success: false, message: "Respuesta de GPT inválida" });
     }
-  });
+
+    res.json({ success: true, cursos: cursosGPT });
+
+  } catch (error) {
+    console.error("❌ Error general en /api/recomendaciones:", error.message);
+    res.status(500).json({ success: false, message: "Error al obtener recomendaciones" });
+  }
+});
 
   app.post("/api/reset-password", async (req, res) => {
     const { usuario, nuevaPassword } = req.body;
@@ -452,8 +453,6 @@ app.get("/api/recomendaciones", async (req, res) => {
       res.status(500).json({ success: false, message: "Error interno" });
     }
   });
-  
-
 
 // Iniciar servidor
 app.listen(PORT, () => {
