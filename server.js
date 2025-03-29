@@ -28,11 +28,6 @@ app.use(session({
 }));
 
 app.use(express.json());
-app.use(session({
-    secret: "skillfinder_secret_key",
-    resave: false,
-    saveUninitialized: true
-}));
 
 // Conexión SQL
 const { createClient } = require("@libsql/client");
