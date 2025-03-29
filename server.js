@@ -10,7 +10,23 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: "https://skillfinderceutec.github.io", // ← tu frontend
+  credentials: true
+}));
+
+app.set('trust proxy', 1); // 👉 necesario en Render para sesiones
+
+app.use(session({
+  secret: "skillfinder_secret_key",
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    sameSite: "none",  // ⚠️ importante para permitir cross-site cookies
+    secure: true       // ⚠️ obligatorio en HTTPS (Render ya lo usa)
+  }
+}));
+
 app.use(express.json());
 app.use(session({
     secret: "skillfinder_secret_key",
