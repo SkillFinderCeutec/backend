@@ -144,6 +144,24 @@ app.post("/api/perfil/intereses", async (req, res) => {
     }
 });
 
+app.get("/api/cursos", async (req, res) => {
+    if (!req.session.userId) {
+        return res.status(401).json({ success: false, message: "No autenticado" });
+    }
+
+    try {
+        const result = await client.execute({
+            sql: "SELECT name, plataforma, url, estado FROM Courses WHERE user_id = ?",
+            args: [req.session.userId]
+        });
+
+        res.json({ success: true, cursos: result.rows });
+    } catch (err) {
+        console.error("❌ Error al obtener cursos:", err);
+        res.status(500).json({ success: false, message: "Error al obtener cursos" });
+    }
+});
+
 // Guardar curso
 app.post("/api/cursos/guardar", async (req, res) => {
     if (!req.session.userId) {
@@ -180,27 +198,6 @@ app.post("/api/cursos/guardar", async (req, res) => {
         console.error("❌ Error al guardar curso:", err);
         res.status(500).json({ success: false, message: "Error al guardar el curso" });
     }
-});
-
-// Marcar curso como finalizado
-app.post("/api/cursos/finalizar", (req, res) => {
-    const { url } = req.body;
-
-    if (!req.session.userId) {
-        return res.status(401).json({ success: false, message: "No autenticado" });
-    }
-
-    connection.query(
-        "UPDATE Courses SET estado = 'finalizado' WHERE user_id = ? AND url = ?",
-        [req.session.userId, url],
-        (err) => {
-            if (err) {
-                console.error("❌ Error al finalizar curso:", err);
-                return res.status(500).json({ success: false, message: "Error al finalizar curso" });
-            }
-            res.json({ success: true, message: "✅ Curso marcado como finalizado" });
-        }
-    );
 });
 
 app.post("/api/cursos/finalizar", async (req, res) => {
